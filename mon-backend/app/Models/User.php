@@ -1,35 +1,91 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * Modèle User unifié — pointe sur la table `utilisateur` de Supabase.
+ * C'est CE modèle qui est utilisé partout (Auth, Sanctum, controllers).
+ * Le modèle Utilisateur.php peut être supprimé ou gardé comme alias.
+ */
 class User extends Authenticatable
 {
     use HasApiTokens, Notifiable;
 
-    protected $table = 'utilisateur'; // Ta table Supabase
+    protected $table = 'utilisateur';
     protected $primaryKey = 'id_utilisateur';
+    public $timestamps = false;
 
     protected $fillable = [
-        'nom', 'prenom', 'email', 'mot_de_passe', 'id_role', 'id_niveau',
+        'nom',
+        'prenom',
+        'email',
+        'mot_de_passe',
+        'statut',
+        'date_creation',
+        'id_role',
+        'id_niveau',
     ];
 
     protected $hidden = [
-        'mot_de_passe', 'remember_token',
+        'mot_de_passe',
     ];
 
-    // On dit à Laravel que le mot de passe s'appelle 'mot_de_passe'
-        public function getAuthPassword() {
-            return $this->mot_de_passe;
-        }
-    
-        public function niveau()
-        {
-            return $this->belongsTo(Niveau::class, 'id_niveau');
-        }
-    
-        public $timestamps = false; // Supabase gère souvent les dates lui-même
+    /**
+     * Laravel utilise 'password' par défaut — on redirige vers 'mot_de_passe'.
+     */
+    public function getAuthPassword(): string
+    {
+        return $this->mot_de_passe;
     }
-    
+
+    // ─── Relations ────────────────────────────────────────────────────────────
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'id_role', 'id_role');
+    }
+
+    public function niveau()
+    {
+        return $this->belongsTo(Niveau::class, 'id_niveau', 'id_niveau');
+    }
+
+    public function inscriptions()
+    {
+        return $this->hasMany(InscriptionCours::class, 'id_utilisateur', 'id_utilisateur');
+    }
+
+    public function progressions()
+    {
+        return $this->hasMany(Progression::class, 'id_utilisateur', 'id_utilisateur');
+    }
+
+    public function interactions()
+    {
+        return $this->hasMany(InteractionIa::class, 'id_utilisateur', 'id_utilisateur');
+    }
+
+    public function reponses()
+    {
+        return $this->hasMany(ReponseExercice::class, 'id_utilisateur', 'id_utilisateur');
+    }
+
+    public function recommandations()
+    {
+        return $this->hasMany(Recommandation::class, 'id_utilisateur', 'id_utilisateur');
+    }
+
+    public function resultats()
+    {
+        return $this->hasMany(ResultatEvaluation::class, 'id_utilisateur', 'id_utilisateur');
+    }
+
+    public function journaux()
+    {
+        return $this->hasMany(JournalSysteme::class, 'id_utilisateur', 'id_utilisateur');
+    }
+}
