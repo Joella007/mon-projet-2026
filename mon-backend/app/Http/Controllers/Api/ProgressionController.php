@@ -3,87 +3,73 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ProgressionResource;
 use App\Models\Progression;
-use App\Models\Utilisateur;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class ProgressionController extends Controller
 {
     /**
-     * Get all progressions for the authenticated student.
+     * GET /api/progression
+     * Retourne toutes les progressions de l'utilisateur connecté.
      */
     public function index(Request $request)
     {
-        // For now, get the first user. In production, use auth()->user()
-        $user = Utilisateur::first();
-        
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
+        $user = $request->user();
 
         $progressions = Progression::where('id_utilisateur', $user->id_utilisateur)
-            ->with(['cours.chapitre.matiere'])
+            ->with('cours')
             ->get();
 
-        return ProgressionResource::collection($progressions);
+        return response()->json($progressions);
     }
 
     /**
-     * Get progression for a specific course.
+     * GET /api/cours/{id}/progress
+     * Retourne la progression de l'utilisateur pour un cours.
      */
-    public function show($courseId)
+    public function show(Request $request, $id)
     {
-        // For now, get the first user. In production, use auth()->user()
-        $user = Utilisateur::first();
-        
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
+        $user = $request->user();
 
         $progression = Progression::where('id_utilisateur', $user->id_utilisateur)
-            ->where('id_cours', $courseId)
-            ->with(['cours.chapitre.matiere'])
+            ->where('id_cours', $id)
             ->first();
 
-        if (!$progression) {
-            return response()->json([
-                'message' => 'Progression not found',
-                'pourcentage' => 0,
-                'id_cours' => $courseId,
-            ], 200);
-        }
-
-        return new ProgressionResource($progression);
+        return response()->json([
+            'id_cours'    => (int) $id,
+            'pourcentage' => $progression ? (float) $progression->pourcentage : 0,
+        ]);
     }
 
     /**
-     * Update or create progression for a course.
+     * PUT /api/cours/{id}/progress
+     * Met à jour (ou crée) la progression pour un cours.
      */
-    public function update(Request $request, $courseId)
+    public function update(Request $request, $id)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'pourcentage' => 'required|numeric|min:0|max:100',
         ]);
 
-        // For now, get the first user. In production, use auth()->user()
-        $user = Utilisateur::first();
-        
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
         }
+
+        $user = $request->user();
 
         $progression = Progression::updateOrCreate(
             [
                 'id_utilisateur' => $user->id_utilisateur,
-                'id_cours' => $courseId,
+                'id_cours'       => $id,
             ],
             [
-                'pourcentage' => $request->pourcentage,
-                'date_mise_a_jour' => now(),
+                'pourcentage'       => $request->pourcentage,
+                'date_mise_a_jour'  => now(),
+                'date_modification' => now(),
             ]
         );
 
-        return new ProgressionResource($progression->load('cours.chapitre.matiere'));
+        return response()->json($progression);
     }
 }

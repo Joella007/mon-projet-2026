@@ -14,36 +14,55 @@ class AuthController extends Controller
 {
     /**
      * POST /api/register
-     * Inscription d'un nouvel étudiant.
      */
     public function register(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'nom'                  => 'required|string|max:255',
-            'prenom'               => 'required|string|max:255',
-            'email'                => 'required|string|email|max:255|unique:utilisateur,email',
-            'mot_de_passe'         => 'required|string|min:8|confirmed', // attend mot_de_passe_confirmation
-            'id_niveau'            => 'nullable|integer|exists:niveau,id_niveau',
-        ]);
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'nom'                       => 'required|string|max:255',
+                'prenom'                    => 'required|string|max:255',
+                'email'                     => 'required|string|email|max:255|unique:utilisateur,email',
+                'mot_de_passe'              => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'confirmed', // attend mot_de_passe_confirmation
+                    'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_\-#])[A-Za-z\d@$!%*?&_\-#]{8,}$/'
+                ],
+                'id_niveau'                 => 'nullable|integer|exists:niveau,id_niveau',
+            ],
+            // Messages d'erreur personnalisés
+            [
+                'nom.required'                    => 'Le nom est obligatoire.',
+                'prenom.required'                 => 'Le prénom est obligatoire.',
+                'email.required'                  => 'L\'adresse email est obligatoire.',
+                'email.email'                     => 'L\'adresse email n\'est pas valide.',
+                'email.unique'                    => 'Cette adresse email est déjà utilisée.',
+                'mot_de_passe.required'           => 'Le mot de passe est obligatoire.',
+                'mot_de_passe.min'                => 'Le mot de passe doit contenir au minimum 8 caractères.',
+                'mot_de_passe.confirmed'          => 'Les mots de passe ne correspondent pas.',
+                'mot_de_passe.regex'              => 'Le mot de passe doit contenir au moins : 1 majuscule, 1 minuscule, 1 chiffre et 1 caractère spécial (@$!%*?&_-#).',
+            ]
+        );
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // Récupère le rôle "Élève" (doit exister dans la table role)
         $roleEleve = Role::where('nom_role', 'Élève')->first();
         if (!$roleEleve) {
             return response()->json(['message' => 'Le rôle "Élève" est introuvable. Veuillez initialiser les rôles.'], 500);
         }
 
         $user = User::create([
-            'nom'          => $request->nom,
-            'prenom'       => $request->prenom,
-            'email'        => $request->email,
-            'mot_de_passe' => Hash::make($request->mot_de_passe),
-            'id_role'      => $roleEleve->id_role,
-            'id_niveau'    => $request->id_niveau,
-            'statut'       => 'actif',
+            'nom'           => $request->nom,
+            'prenom'        => $request->prenom,
+            'email'         => $request->email,
+            'mot_de_passe'  => Hash::make($request->mot_de_passe),
+            'id_role'       => $roleEleve->id_role,
+            'id_niveau'     => $request->id_niveau,
+            'statut'        => 'actif',
             'date_creation' => now(),
         ]);
 
@@ -57,14 +76,21 @@ class AuthController extends Controller
 
     /**
      * POST /api/login
-     * Connexion d'un utilisateur.
      */
     public function login(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email'        => 'required|email',
-            'mot_de_passe' => 'required|string',
-        ]);
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'email'        => 'required|email',
+                'mot_de_passe' => 'required|string',
+            ],
+            [
+                'email.required'        => 'L\'adresse email est obligatoire.',
+                'email.email'           => 'L\'adresse email n\'est pas valide.',
+                'mot_de_passe.required' => 'Le mot de passe est obligatoire.',
+            ]
+        );
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -90,7 +116,6 @@ class AuthController extends Controller
 
     /**
      * POST /api/logout
-     * Déconnexion — révoque le token courant (nécessite auth:sanctum).
      */
     public function logout(Request $request)
     {

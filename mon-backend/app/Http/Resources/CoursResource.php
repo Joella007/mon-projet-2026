@@ -7,27 +7,22 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class CoursResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
-            'id_cours' => $this->id_cours,
-            'titre' => $this->titre,
-            'description' => $this->description ?? null,
-            'niveau' => $this->niveau ?? null,
-            'id_chapitre' => $this->id_chapitre,
-            'date_creation' => $this->date_creation,
-            'thumbnail' => $this->thumbnail ?? null,
-            'duration' => $this->duration ?? 0,
-            'lessonsCount' => $this->lessonsCount ?? 0,
-            'rating' => $this->rating ?? 0,
-            'enrolledCount' => $this->enrolledCount ?? 0,
-            'chapitre' => new ChapitreResource($this->whenLoaded('chapitre')),
-            'exercices' => ExerciceResource::collection($this->whenLoaded('exercices')),
+            'id_cours'          => $this->id_cours,
+            'titre'             => $this->titre,
+            'description'       => $this->description,
+            'niveau'            => $this->niveau,
+            'id_chapitre'       => $this->id_chapitre,
+            'date_creation'     => $this->date_creation,
+            'date_modification' => $this->date_modification,
+            'duree'             => $this->duree,
+
+            // Relations chargées
+            'chapitre'   => new ChapitreResource($this->whenLoaded('chapitre')),
+            'exercices'  => ExerciceResource::collection($this->whenLoaded('exercices')),
+            'evaluations'=> EvaluationResource::collection($this->whenLoaded('evaluations')),
         ];
     }
 }
